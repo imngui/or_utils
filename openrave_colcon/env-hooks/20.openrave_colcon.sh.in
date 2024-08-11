@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# for share_path in $(find $AMENT_PREFIX_PATH/share -maxdepth 1 -type d | tac); do
+#     OPENRAVE_PLUGINS="${share_path}/@PLUGINS_DIRECTORY@:${OPENRAVE_PLUGINS}"
+#     OPENRAVE_DATA="${share_path}/@DATA_DIRECTORY@:${OPENRAVE_DATA}"
+#     OPENRAVE_DATABASE="${share_path}/@DATABASES_DIRECTORY@:${OPENRAVE_DATABASES}"
+# done
+
+IFS=':' # Set the Internal Field Separator to colon
+for share_path in $(find $AMENT_PREFIX_PATH/share -maxdepth 1 -type d | tac); do
+    # echo "Processing: $share_path"
+    OPENRAVE_PLUGINS="${share_path}/@PLUGINS_DIRECTORY@:${OPENRAVE_PLUGINS}"
+    OPENRAVE_DATA="${share_path}/@DATA_DIRECTORY@:${OPENRAVE_DATA}"
+    OPENRAVE_DATABASE="${share_path}/@DATABASES_DIRECTORY@:${OPENRAVE_DATABASES}"
+done
+
+export OPENRAVE_PLUGINS OPENRAVE_DATA OPENRAVE_DATABASES
