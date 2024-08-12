@@ -50,6 +50,7 @@ include_directories(
     ${TinyXML2_INCLUDE_DIRS}
     ${OpenRAVE_INCLUDE_DIRS}
     /opt/ros/humble/include 
+    /opt/ros/jazzy/include 
 )
 link_directories(
     ${Boost_LIBRARY_DIRS}

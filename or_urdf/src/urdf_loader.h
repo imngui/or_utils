@@ -17,7 +17,7 @@
 #include <urdf/model.h>
 #include <srdfdom/model.h>
 
-#include <tinyxml.h>
+#include <tinyxml2.h>
 
 #include "ament_finder.h"
 
@@ -59,7 +59,7 @@ namespace or_urdf
                    std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> &manip_infos);
 
     void ProcessGeometryGroupTagsFromURDF(
-                   TiXmlDocument &xml_doc,
+                   tinyxml2::XMLDocument &xml_doc,
                    std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos);
     
     /* This is called on env.LoadProblem(m, 'command') */
@@ -70,7 +70,7 @@ namespace or_urdf
     OpenRAVE::EnvironmentBasePtr _env;
     or_urdf::AmentFinder _ament_finder;
 
-    std::string loadModel(urdf::Model &urdf_model, TiXmlDocument &xml_doc,
+    std::string loadModel(urdf::Model &urdf_model, tinyxml2::XMLDocument &xml_doc,
                      std::shared_ptr<srdf::Model> srdf_model = nullptr,
                      std::string uri = std::string());
     std::string resolveURI(const std::string &path) const;

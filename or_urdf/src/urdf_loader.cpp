@@ -691,20 +691,20 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
 }
 
 void URDFLoader::ProcessGeometryGroupTagsFromURDF(
-                       TiXmlDocument &xml_doc,
+                       tinyxml2::XMLDocument &xml_doc,
                        std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos)
 {
-    TiXmlHandle xml_handle(&xml_doc);
+    tinyxml2::XMLHandle xml_handle(&xml_doc);
 
     // <robot> element
-    TiXmlHandle robot_handle(0);
+    tinyxml2::XMLHandle robot_handle(0);
     {
-        TiXmlElement* robot_element = xml_handle.FirstChild("robot").Element();
+        tinyxml2::XMLElement* robot_element = xml_handle.FirstChildElement("robot").ToElement();
         if (!robot_element) {
             throw std::runtime_error("Could not find the 'robot' element in the xml file.");
         }
 
-        robot_handle = TiXmlHandle(robot_element);
+        robot_handle = tinyxml2::XMLHandle(robot_element);
     }
 
     // Store a set of unique <geometry_group> names found in the URDF
@@ -715,7 +715,7 @@ void URDFLoader::ProcessGeometryGroupTagsFromURDF(
     // then add that group to the OpenRAVE link_infos:
 
     // <link> elements
-    for (TiXmlElement* link_element = robot_handle.FirstChild("link").Element();
+    for (tinyxml2::XMLElement* link_element = robot_handle.FirstChildElement("link").ToElement();
          link_element;
          link_element = link_element->NextSiblingElement("link"))
     {
@@ -724,7 +724,7 @@ void URDFLoader::ProcessGeometryGroupTagsFromURDF(
             throw std::runtime_error("Link is missing 'name' attribute.");
         }
 
-        TiXmlHandle link_handle = TiXmlHandle(link_element);
+        tinyxml2::XMLHandle link_handle = tinyxml2::XMLHandle(link_element);
 
         // Find the corresponding OpenRAVE link
         OpenRAVE::KinBody::LinkInfoPtr link_info;
@@ -743,7 +743,7 @@ void URDFLoader::ProcessGeometryGroupTagsFromURDF(
 
         // <geometry_group> element
         const char* geometry_group_name;
-        for (TiXmlElement* geometry_group_element = link_handle.FirstChild("geometry_group").Element();
+        for (tinyxml2::XMLElement* geometry_group_element = link_handle.FirstChildElement("geometry_group").ToElement();
              geometry_group_element;
              geometry_group_element = geometry_group_element->NextSiblingElement("geometry_group"))
         {
@@ -757,11 +757,11 @@ void URDFLoader::ProcessGeometryGroupTagsFromURDF(
             // Add this geometry group to our set of groups
             geometry_group_names_set.insert(geometry_group_name);
 
-            TiXmlHandle geometry_group_handle = TiXmlHandle(geometry_group_element);
+            tinyxml2::XMLHandle geometry_group_handle = tinyxml2::XMLHandle(geometry_group_element);
 
             // <origin> element
             urdf::Pose origin_pose;
-            for (TiXmlElement* origin_element = geometry_group_handle.FirstChild("origin").Element();
+            for (tinyxml2::XMLElement* origin_element = geometry_group_handle.FirstChildElement("origin").ToElement();
                  origin_element;
                  origin_element = origin_element->NextSiblingElement("origin"))
             {
@@ -784,14 +784,14 @@ void URDFLoader::ProcessGeometryGroupTagsFromURDF(
             }
 
             // <geometry> element
-            for (TiXmlElement* geometry_element = geometry_group_handle.FirstChild("geometry").Element();
+            for (tinyxml2::XMLElement* geometry_element = geometry_group_handle.FirstChildElement("geometry").ToElement();
                  geometry_element;
                  geometry_element = geometry_element->NextSiblingElement("geometry"))
             {
-                TiXmlHandle geometry_handle = TiXmlHandle(geometry_element);
+                tinyxml2::XMLHandle geometry_handle = tinyxml2::XMLHandle(geometry_element);
 
                 // <mesh> element
-                for (TiXmlElement* mesh_element = geometry_handle.FirstChild("mesh").Element();
+                for (tinyxml2::XMLElement* mesh_element = geometry_handle.FirstChildElement("mesh").ToElement();
                      mesh_element;
                      mesh_element = mesh_element->NextSiblingElement("mesh"))
                 {
@@ -887,8 +887,8 @@ bool URDFLoader::loadURI(std::ostream &soutput, std::istream &sinput)
     }
 
     // Parse the URDF again to find <geometry_group> elements
-    TiXmlDocument xml_doc(input_urdf.c_str());
-    if (!xml_doc.LoadFile()) {
+    tinyxml2::XMLDocument xml_doc;
+    if (!xml_doc.LoadFile(input_urdf.c_str())) {
       throw std::runtime_error("Could not load the URDF file.");
     }
 
@@ -970,10 +970,10 @@ bool URDFLoader::loadJsonString(std::ostream &soutput, std::istream &sinput)
     }
 
     // Parse the URDF again to find <geometry_group> elements
-    TiXmlDocument xml_doc;
+    tinyxml2::XMLDocument xml_doc;
     xml_doc.Parse(urdf_string.c_str());
     if (xml_doc.Error()) {
-      std::string xmlerr = xml_doc.ErrorDesc();
+      std::string xmlerr = xml_doc.ErrorStr();
       throw std::runtime_error("Could not parse the URDF file: " + xmlerr);
     }
 
@@ -987,7 +987,7 @@ bool URDFLoader::loadJsonString(std::ostream &soutput, std::istream &sinput)
 }
 
 std::string URDFLoader::loadModel(urdf::Model &urdf_model,
-                                  TiXmlDocument &xml_doc,
+                                  tinyxml2::XMLDocument &xml_doc,
                                   std::shared_ptr<srdf::Model> srdf_model,
                                   std::string uri)
 {
