@@ -38,6 +38,10 @@ boost::shared_ptr<T> ConvertCPToBoostNC(const std::shared_ptr<T> _stdPtr) {
 template <typename T>
 boost::shared_ptr<T> ConvertCSPToBoostNC(const std::shared_ptr<T const> _stdPtr) {
     return boost::shared_ptr<T>(const_cast<T*>(_stdPtr.get()));
+    // return boost::shared_ptr<T>(
+    //     const_cast<T*>(_stdPtr.get()),
+    //     [_stdPtr](T*) mutable { _stdPtr.reset(); } // Custom deleter
+    // );
 }
 
 OpenRAVE::InterfaceBasePtr CreateInterfaceValidated(
@@ -233,6 +237,7 @@ void URDFLoader::ParseURDF(
     // std::vector<boost::shared_ptr<urdf::Link> > link_vector;
     std::vector<std::shared_ptr<urdf::Link> > link_vector;
     model.getLinks(link_vector);
+    // std::cout << "ParseURDF::link_vector: " << link_vector.size() << std::endl;
 
     std::list<std::shared_ptr<urdf::Link const> > link_list;
     std::set<std::string> finished_links;
@@ -243,25 +248,35 @@ void URDFLoader::ParseURDF(
             link_list.insert(link_list.end(), link);
         }
     }
+    // std::cout << "ParseURDF::link_list: " << link_list.size() << std::endl;
 
     // TODO: prevent infinite loops here
     // Iterate through all links, allowing deferred evaluation (putting links
     // back on the list) if their parents do not exist yet
-    boost::shared_ptr<urdf::Link const> link_ptr;
+    std::shared_ptr<urdf::Link const> link_ptr;
 
     while (!link_list.empty()) {
+        // std::cout << "ll size: " << link_list.size() << std::endl;
         // Get next element in list
-        link_ptr = ConvertCSPToBoost<urdf::Link>(link_list.front());
+        // auto ll_front = link_list.front();
+        // link_ptr = ConvertCSPToBoost<urdf::Link>(link_list.front());
+        link_ptr = link_list.front();
         link_list.pop_front();
+
+        // std::cout << "ll size: " << link_list.size() << std::endl;
 
         OpenRAVE::KinBody::LinkInfoPtr link_info
                 = boost::make_shared<OpenRAVE::KinBody::LinkInfo>();
 
         // TODO: Set "type" to "dynamic".
         link_info->_name = link_ptr->name;
+        // std::cout << "ParseURDF::link_info->_name: " << link_info->_name << std::endl;
 
+        // std::cout << "HERE1" << std::endl;
         // Set inertial parameters
-        boost::shared_ptr<urdf::Inertial> inertial = ConvertCPToBoostNC<urdf::Inertial>(link_ptr->inertial);
+        // std::shared_ptr<urdf::Inertial> inertial = ConvertCPToBoostNC<urdf::Inertial>(link_ptr->inertial);
+        std::shared_ptr<urdf::Inertial> inertial = link_ptr->inertial;
+        // std::cout << "inertial: " << inertial << std::endl;
         if (inertial) {
             // XXX: We should also specify the off-diagonal terms (ixy, iyz, ixz)
             // of the inertia tensor. We can do this in KinBody XML files, but I
@@ -272,18 +287,39 @@ void URDFLoader::ParseURDF(
                     inertial->ixx, inertial->iyy, inertial->izz);
         }
 
+        // std::cout << "HERE2" << std::endl;
         // Set local transformation to be same as parent joint
-        boost::shared_ptr<urdf::Joint> parent_joint = ConvertCPToBoostNC<urdf::Joint>(link_ptr->parent_joint);
-        while (parent_joint) {
+        // boost::shared_ptr<urdf::Joint> parent_joint = ConvertCPToBoostNC<urdf::Joint>(link_ptr->parent_joint);
+        std::shared_ptr<urdf::Joint> parent_joint = link_ptr->parent_joint;
+        while (true) {
+            // std::cout << "HELP1" << std::endl;
+            // std::cout << "pj1: " << parent_joint << std::endl;
+            if (!parent_joint) {
+                // std::cout << "Error: parent_joint became null unexpectedly." << std::endl;
+                break;
+            }
+            // std::cout << "parent_joint->_name: " << parent_joint->name << std::endl;
+            // std::cout << "parent_joint transform: " << parent_joint->parent_to_joint_origin_transform << std::endl;
+            // std::cout << "link_info transform: " << link_info->GetTransform() << std::endl;
             // link_info->GetTransform() = URDFPoseToRaveTransform(
             //         parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform();
             link_info->SetTransform(URDFPoseToRaveTransform(
                     parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform());
-            boost::shared_ptr<urdf::Link const> parent_link
-                    =  ConvertCSPToBoost<urdf::Link>(model.getLink(parent_joint->parent_link_name));
-            parent_joint = ConvertCSPToBoostNC<urdf::Joint>(parent_link->parent_joint);
-        }
+            // boost::shared_ptr<urdf::Link const> parent_link
+            //         =  ConvertCSPToBoost<urdf::Link>(model.getLink(parent_joint->parent_link_name));
+            std::shared_ptr<urdf::Link const> parent_link
+                    =  model.getLink(parent_joint->parent_link_name);
 
+            // parent_joint = ConvertCSPToBoostNC<urdf::Joint>(parent_link->parent_joint);
+            parent_joint = parent_link->parent_joint;
+            // std::cout << "HELP2" << std::endl;
+            // std::cout << "pj2: " << parent_joint << std::endl;
+            if(!parent_joint) {
+                // std::cout << "last parent" << std::endl;
+                break;
+            }
+        }
+        // std::cout << "HERE3" << std::endl;
         // Set information for collision geometry
         BOOST_FOREACH (std::shared_ptr<urdf::Collision> collision,
                        link_ptr->collision_array) {
@@ -354,12 +390,13 @@ void URDFLoader::ParseURDF(
 
             link_info->_vgeometryinfos.push_back(geom_info);
         }
-
+        // std::cout << "HERE4" << std::endl;
         // Add the render geometry. We can't create a link with no collision
         // geometry, so we'll instead create a zero-radius sphere with the
         // desired render mesh.
         // TODO: Why does GT_None crash OpenRAVE?
-        boost::shared_ptr<urdf::Visual> visual = ConvertCSPToBoostNC<urdf::Visual>(link_ptr->visual);
+        // boost::shared_ptr<urdf::Visual> visual = ConvertCSPToBoostNC<urdf::Visual>(link_ptr->visual);
+        std::shared_ptr<urdf::Visual> visual = link_ptr->visual;
         if (visual) {
             OpenRAVE::KinBody::GeometryInfoPtr geom_info
                 = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>();
@@ -376,7 +413,8 @@ void URDFLoader::ParseURDF(
                 geom_info->_vRenderScale = URDFVectorToRaveVector(mesh.scale);
 
                 // If a material color is specified, use it.
-                boost::shared_ptr<urdf::Material> material =  ConvertCSPToBoostNC<urdf::Material>(visual->material);
+                // boost::shared_ptr<urdf::Material> material =  ConvertCSPToBoostNC<urdf::Material>(visual->material);
+                std::shared_ptr<urdf::Material> material =  visual->material;
                 if (material) {
                     geom_info->_vDiffuseColor = URDFColorToRaveVector(material->color);
                     geom_info->_vAmbientColor = URDFColorToRaveVector(material->color);
@@ -397,6 +435,7 @@ void URDFLoader::ParseURDF(
                 RAVELOG_WARN("Link[%s]: Only trimeshes are supported for visual geometry.\n", link_ptr->name.c_str());
             }
         }
+        // std::cout << "HERE5" << std::endl;
 
         // Verify that the "visual" and "spheres" groups always exist. Recall
         // that accessing an element with operator[] creates it using the default
@@ -405,22 +444,28 @@ void URDFLoader::ParseURDF(
         link_info->_mapExtraGeometries["spheres"];
 
         link_infos.push_back(link_info);
+        // std::cout << "HERE6" << std::endl;
     }
 
+    // std::cout << "HERE7" << std::endl;
     // Populate vector of joints
     std::string joint_name;
     boost::shared_ptr<urdf::Joint> joint_ptr;
 
     // Parse the joint properties
-    std::vector<boost::shared_ptr<urdf::Joint> > ordered_joints;
+    // std::vector<boost::shared_ptr<urdf::Joint> > ordered_joints;
+    std::vector<std::shared_ptr<urdf::Joint> > ordered_joints;
     // BOOST_FOREACH(boost::tie(joint_name, joint_ptr), model.joints_) {
     //     ordered_joints.push_back(joint_ptr);
     // }
     for(auto const& joint : model.joints_) {
-        ordered_joints.push_back(ConvertCSPToBoostNC<urdf::Joint>(joint.second));
+        // ordered_joints.push_back(ConvertCSPToBoostNC<urdf::Joint>(joint.second));
+        ordered_joints.push_back(joint.second);
     }
 
-    BOOST_FOREACH(boost::shared_ptr<urdf::Joint> joint_ptr, ordered_joints) {
+    // std::cout << "HERE8" << std::endl;
+    // BOOST_FOREACH(boost::shared_ptr<urdf::Joint> joint_ptr, ordered_joints) {
+    for(std::shared_ptr<urdf::Joint> joint_ptr : ordered_joints) {
         OpenRAVE::KinBody::JointInfoPtr joint_info = boost::make_shared<OpenRAVE::KinBody::JointInfo>();
         joint_info->_name = joint_ptr->name;
         joint_info->_linkname0 = joint_ptr->parent_link_name;
@@ -441,7 +486,8 @@ void URDFLoader::ParseURDF(
         // URDF only supports linear mimic joints with a constant offset. We map
         // that into the correct position (index 0) and velocity (index 1)
         // equations for OpenRAVE.
-        boost::shared_ptr<urdf::JointMimic> mimic =  ConvertCSPToBoostNC<urdf::JointMimic>(joint_ptr->mimic);
+        // boost::shared_ptr<urdf::JointMimic> mimic =  ConvertCSPToBoostNC<urdf::JointMimic>(joint_ptr->mimic);
+        std::shared_ptr<urdf::JointMimic> mimic =  joint_ptr->mimic;
         if (mimic) {
             joint_info->_vmimic[0] = boost::make_shared<OpenRAVE::KinBody::MimicInfo>();
             joint_info->_vmimic[0]->_equations[0] = boost::str(boost::format("%s*%0.6f+%0.6f")
@@ -460,7 +506,8 @@ void URDFLoader::ParseURDF(
         joint_info->_vaxes[0] = URDFVectorToRaveVector(joint_axis);
 
         // Configure joint limits.
-        boost::shared_ptr<urdf::JointLimits> limits =  ConvertCSPToBoostNC<urdf::JointLimits>(joint_ptr->limits);
+        // boost::shared_ptr<urdf::JointLimits> limits =  ConvertCSPToBoostNC<urdf::JointLimits>(joint_ptr->limits);
+        std::shared_ptr<urdf::JointLimits> limits =  joint_ptr->limits;
         if (limits) {
             // TODO: What about acceleration?
             joint_info->_vlowerlimit[0] = limits->lower;
@@ -997,6 +1044,8 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
   std::vector<OpenRAVE::KinBody::LinkInfoPtr> link_infos;
   std::vector<OpenRAVE::KinBody::JointInfoPtr> joint_infos;
   ParseURDF(urdf_model, link_infos, joint_infos);
+//   std::cout << "link_infos: " << link_infos.size() << std::endl;
+//   std::cout << "joint_infos: " << joint_infos.size() << std::endl;
 
   std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> manip_infos;
   std::vector<OpenRAVE::RobotBase::AttachedSensorInfoPtr> sensor_infos;
