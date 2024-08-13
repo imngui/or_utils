@@ -18,13 +18,16 @@ find_package(ament_cmake REQUIRED)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
 
+# Set the path to the workspace install directory
+set(INSTALL_PREFIX_PATH "~/ferl_ws/install")
+
 find_package(srdfdom REQUIRED)
 message(STATUS "SRDF FOUND: ${srdfdom_FOUND}")
-find_library(srdfdom_LIBRARIES NAMES srdfdom)
-list(APPEND srdfdom_INCLUDE_DIRS "/root/xr_phri_ws/install/srdfdom/include/srdfdom")
-message(STATUS "srdfdom_INCLUDE_DIRS ${srdf_INCLUDE_DIRS}")
-list(APPEND srdfdom_LIBRARY_DIRS "/root/xr_phri_ws/install/srdfdom/lib/srdfdom")
-list(APPEND srdfdom_LIBRARIES "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so" "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so.2.0.4")
+# find_library(srdfdom_LIBRARIES NAMES srdfdom)
+# list(APPEND srdfdom_INCLUDE_DIRS "${INSTALL_PREFIX_PATH}/srdfdom/include/srdfdom")
+# message(STATUS "srdfdom_INCLUDE_DIRS ${srdf_INCLUDE_DIRS}")
+# list(APPEND srdfdom_LIBRARY_DIRS "${INSTALL_PREFIX_PATH}/srdfdom/lib/srdfdom")
+# list(APPEND srdfdom_LIBRARIES "${INSTALL_PREFIX_PATH}/srdfdom/lib/libsrdfdom.so" "${INSTALL_PREFIX_PATH}/srdfdom/lib/libsrdfdom.so.2.0.4")
 find_package(urdf REQUIRED)
 find_package(Boost REQUIRED COMPONENTS
     filesystem
@@ -57,7 +60,8 @@ link_directories(
     ${OpenRAVE_LIBRARY_DIRS}
 )
 
-add_library("${PROJECT_NAME}_plugin" MODULE
+add_library("${PROJECT_NAME}_plugin" SHARED
+    src/urdfrave.cpp
     src/urdf_loader.cpp
     src/ament_finder.cpp
 )
@@ -77,7 +81,7 @@ target_link_libraries("${PROJECT_NAME}_plugin"
 )
 
 install(TARGETS "${PROJECT_NAME}_plugin"
-    LIBRARY DESTINATION "lib/openrave-${OpenRAVE_LIBRARY_SUFFIX}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/openrave-${OpenRAVE_LIBRARY_SUFFIX}"
 )
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/ament-env-hooks/20.${PROJECT_NAME}.sh.in")
