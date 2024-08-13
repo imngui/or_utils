@@ -888,7 +888,7 @@ bool URDFLoader::loadURI(std::ostream &soutput, std::istream &sinput)
 
     // Parse the URDF again to find <geometry_group> elements
     tinyxml2::XMLDocument xml_doc;
-    if (!xml_doc.LoadFile(input_urdf.c_str())) {
+    if (xml_doc.LoadFile(input_urdf.c_str())) {
       throw std::runtime_error("Could not load the URDF file.");
     }
 
