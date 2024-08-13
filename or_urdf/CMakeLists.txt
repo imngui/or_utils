@@ -5,8 +5,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# set(CMAKE_CXX_STANDARD 11)
-# set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 # set(CMAKE_CXX_EXTENSIONS False)
 # add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
@@ -19,10 +19,12 @@ find_package(ament_cmake REQUIRED)
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
 
 find_package(srdfdom REQUIRED)
-# find_library(srdfdom_LIBRARIES NAMES srdfdom)
-# list(APPEND srdfdom_INCLUDE_DIRS "/root/xr_phri_ws/install/srdfdom/include/srdfdom")
-# list(APPEND srdfdom_LIBRARY_DIRS "/root/xr_phri_ws/install/srdfdom/lib/srdfdom")
-# list(APPEND srdfdom_LIBRARIES "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so" "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so.2.0.4")
+message(STATUS "SRDF FOUND: ${srdfdom_FOUND}")
+find_library(srdfdom_LIBRARIES NAMES srdfdom)
+list(APPEND srdfdom_INCLUDE_DIRS "/root/xr_phri_ws/install/srdfdom/include/srdfdom")
+message(STATUS "srdfdom_INCLUDE_DIRS ${srdf_INCLUDE_DIRS}")
+list(APPEND srdfdom_LIBRARY_DIRS "/root/xr_phri_ws/install/srdfdom/lib/srdfdom")
+list(APPEND srdfdom_LIBRARIES "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so" "/root/xr_phri_ws/install/srdfdom/lib/libsrdfdom.so.2.0.4")
 find_package(urdf REQUIRED)
 find_package(Boost REQUIRED COMPONENTS
     filesystem
@@ -49,8 +51,6 @@ include_directories(
     ${urdf_INCLUDE_DIRS}
     ${TinyXML2_INCLUDE_DIRS}
     ${OpenRAVE_INCLUDE_DIRS}
-    /opt/ros/humble/include 
-    /opt/ros/jazzy/include 
 )
 link_directories(
     ${Boost_LIBRARY_DIRS}
@@ -73,7 +73,7 @@ target_link_libraries("${PROJECT_NAME}_plugin"
     ${urdf_LIBRARIES}
     ${TinyXML2_LIBRARIES}
     ${OpenRAVE_LIBRARIES}
-    OpenRAVE::libopenrave
+    srdfdom::srdfdom
 )
 
 install(TARGETS "${PROJECT_NAME}_plugin"
@@ -83,8 +83,7 @@ install(TARGETS "${PROJECT_NAME}_plugin"
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/ament-env-hooks/20.${PROJECT_NAME}.sh.in")
 
 ament_export_dependencies(srdfdom urdf Boost TinyXML2 OpenRAVE)
-ament_export_include_directories(${Boost_INCLUDE_DIRS} ${srdfdom_INCLUDE_DIRS} ${urdf_INCLUDE_DIRS} ${TinyXML2_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} /opt/ros/humble/include)
-# ament_export_include_directories(${Boost_INCLUDE_DIRS} ${srdfdom_INCLUDE_DIRS} ${urdf_INCLUDE_DIRS} ${TinyXML2_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} /root/xr_phri_ws/install/srdfdom/include/srdfdom)
+ament_export_include_directories(${Boost_INCLUDE_DIRS} ${srdfdom_INCLUDE_DIRS} ${urdf_INCLUDE_DIRS} ${TinyXML2_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} srdfdom::srdfdom)
 ament_export_libraries(${PROJECT_NAME}_plugin)
 
 
