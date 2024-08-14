@@ -1105,7 +1105,7 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
   }
 
   body->SetName(urdf_model.getName());
-  GetEnv()->Add(body, true);
+  GetEnv()->Add(body, OpenRAVE::InterfaceAddMode::IAM_AllowRenaming);
   return body->GetName();
 }
 
