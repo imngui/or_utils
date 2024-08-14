@@ -1066,8 +1066,8 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
   std::vector<OpenRAVE::KinBody::LinkInfoPtr> link_infos;
   std::vector<OpenRAVE::KinBody::JointInfoPtr> joint_infos;
   ParseURDF(urdf_model, link_infos, joint_infos);
-  std::cout << "link_infos: " << link_infos.size() << std::endl;
-  std::cout << "joint_infos: " << joint_infos.size() << std::endl;
+//   std::cout << "link_infos: " << link_infos.size() << std::endl;
+//   std::cout << "joint_infos: " << joint_infos.size() << std::endl;
 
   std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> manip_infos;
   std::vector<OpenRAVE::RobotBase::AttachedSensorInfoPtr> sensor_infos;
