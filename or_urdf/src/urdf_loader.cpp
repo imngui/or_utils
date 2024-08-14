@@ -194,7 +194,7 @@ OpenRAVE::Vector URDFVectorToRaveVector(const urdf::Vector3 &vector)
 /** Converts from URDF 3D rotation to OpenRAVE 3D vector. */
 OpenRAVE::Vector URDFRotationToRaveVector(const urdf::Rotation &rotation)
 {
-    return OpenRAVE::Vector(rotation.w, rotation.x, rotation.y, rotation.z);
+    return OpenRAVE::Vector(rotation.x, rotation.y, rotation.z, rotation.w);
 }
 
 OpenRAVE::Vector URDFColorToRaveVector(const urdf::Color &color)
@@ -411,7 +411,9 @@ void URDFLoader::ParseURDF(
         if (visual) {
             OpenRAVE::KinBody::GeometryInfoPtr geom_info
                 = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>();
+            // std::cout << "visual->origin: " << visual->origin.rotation.w << " " << visual->origin.rotation.x << " " << visual->origin.rotation.y << " " << visual->origin.rotation.z << std::endl;
             geom_info->SetTransform(URDFPoseToRaveTransform(visual->origin));
+            // std::cout << "Transform: " << URDFPoseToRaveTransform(visual->origin) << std::endl;
             geom_info->_type = OpenRAVE::GT_Sphere;
             geom_info->_vGeomData = OpenRAVE::Vector(0.0, 0.0, 0.0);
             geom_info->_bModifiable = false;
