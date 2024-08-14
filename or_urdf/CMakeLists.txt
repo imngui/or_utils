@@ -19,7 +19,7 @@ find_package(ament_cmake REQUIRED)
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
 
 # Set the path to the workspace install directory
-set(INSTALL_PREFIX_PATH "~/ferl_ws/install")
+# set(INSTALL_PREFIX_PATH "~/ferl_ws/install")
 
 find_package(srdfdom REQUIRED)
 message(STATUS "SRDF FOUND: ${srdfdom_FOUND}")
