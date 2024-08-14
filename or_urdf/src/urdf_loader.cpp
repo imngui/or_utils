@@ -338,13 +338,14 @@ void URDFLoader::ParseURDF(
 
             // TODO: Shouldn't we apply this transform?
             geom_info->SetTransform(URDFPoseToRaveTransform(collision->origin));
-            geom_info->_bVisible = false;
+            geom_info->_bVisible = true;
             geom_info->_bModifiable = false;
 
             switch (collision->geometry->type) {
                 case urdf::Geometry::MESH: {
                     urdf::Mesh const &mesh
                             = dynamic_cast<const urdf::Mesh &>(*collision->geometry);
+                    // std::cout << "mesh.filename: " << mesh.filename << std::endl;
                     geom_info->_filenamecollision = resolveURI(mesh.filename);
                     geom_info->_type = OpenRAVE::GT_TriMesh;
 
@@ -356,6 +357,7 @@ void URDFLoader::ParseURDF(
                     trimesh = GetEnv()->ReadTrimeshURI(trimesh,
                                                        geom_info->_filenamecollision);
                     if (trimesh) {
+                        // std::cout << "Trimesh size: " << trimesh->vertices.size() << std::endl;
                         // The _vCollisionScale property does nothing, so we have to
                         // manually scale the mesh.
                         BOOST_FOREACH(OpenRAVE::Vector &vertex, trimesh->vertices) {
@@ -416,32 +418,32 @@ void URDFLoader::ParseURDF(
             geom_info->_bVisible = true;
 
             switch (visual->geometry->type) {
-            case urdf::Geometry::MESH: {
-                const urdf::Mesh &mesh = dynamic_cast<const urdf::Mesh&>(*visual->geometry);
-                geom_info->_filenamerender = resolveURI(mesh.filename);
-                geom_info->_vRenderScale = URDFVectorToRaveVector(mesh.scale);
+                case urdf::Geometry::MESH: {
+                    const urdf::Mesh &mesh = dynamic_cast<const urdf::Mesh&>(*visual->geometry);
+                    geom_info->_filenamerender = resolveURI(mesh.filename);
+                    geom_info->_vRenderScale = URDFVectorToRaveVector(mesh.scale);
 
-                // If a material color is specified, use it.
-                // boost::shared_ptr<urdf::Material> material =  ConvertCSPToBoostNC<urdf::Material>(visual->material);
-                std::shared_ptr<urdf::Material> material =  visual->material;
-                if (material) {
-                    geom_info->_vDiffuseColor = URDFColorToRaveVector(material->color);
-                    geom_info->_vAmbientColor = URDFColorToRaveVector(material->color);
+                    // If a material color is specified, use it.
+                    // boost::shared_ptr<urdf::Material> material =  ConvertCSPToBoostNC<urdf::Material>(visual->material);
+                    std::shared_ptr<urdf::Material> material =  visual->material;
+                    if (material) {
+                        geom_info->_vDiffuseColor = URDFColorToRaveVector(material->color);
+                        geom_info->_vAmbientColor = URDFColorToRaveVector(material->color);
+                    }
+
+                    // Add the render-only geometry to the standard geometry group for
+                    // backwards compatability with QtCoin.
+                    link_info->_vgeometryinfos.push_back(geom_info);
+
+                    // Create a group dedicated to visual geometry for or_rviz.
+                    OpenRAVE::KinBody::GeometryInfoPtr geom_info_clone
+                        = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>(*geom_info);
+                    link_info->_mapExtraGeometries["visual"].push_back(geom_info_clone);
+                    break;
                 }
 
-                // Add the render-only geometry to the standard geometry group for
-                // backwards compatability with QtCoin.
-                link_info->_vgeometryinfos.push_back(geom_info);
-
-                // Create a group dedicated to visual geometry for or_rviz.
-                OpenRAVE::KinBody::GeometryInfoPtr geom_info_clone
-                    = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>(*geom_info);
-                link_info->_mapExtraGeometries["visual"].push_back(geom_info_clone);
-                break;
-            }
-
-            default:
-                RAVELOG_WARN("Link[%s]: Only trimeshes are supported for visual geometry.\n", link_ptr->name.c_str());
+                default:
+                    RAVELOG_WARN("Link[%s]: Only trimeshes are supported for visual geometry.\n", link_ptr->name.c_str());
             }
         }
 
@@ -1064,8 +1066,8 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
   std::vector<OpenRAVE::KinBody::LinkInfoPtr> link_infos;
   std::vector<OpenRAVE::KinBody::JointInfoPtr> joint_infos;
   ParseURDF(urdf_model, link_infos, joint_infos);
-//   std::cout << "link_infos: " << link_infos.size() << std::endl;
-//   std::cout << "joint_infos: " << joint_infos.size() << std::endl;
+  std::cout << "link_infos: " << link_infos.size() << std::endl;
+  std::cout << "joint_infos: " << joint_infos.size() << std::endl;
 
   std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> manip_infos;
   std::vector<OpenRAVE::RobotBase::AttachedSensorInfoPtr> sensor_infos;
@@ -1085,6 +1087,7 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
         manip_infos_const = MakeConst(manip_infos);
     std::vector<OpenRAVE::RobotBase::AttachedSensorInfoConstPtr>
         sensor_infos_const = MakeConst(sensor_infos);
+    // std::cout << "const_link_infos: " << link_infos_const.size() << std::endl;
 
     // TODO: Sort the joints to guarantee contiguous manipulators.
 
@@ -1120,6 +1123,7 @@ std::string URDFLoader::resolveURI(const std::string &path) const
 
         // Resolve the mesh path as a file URI
         boost::filesystem::path file_path(uri);
+        // std::cout << "file path: " << file_path.string() << std::endl;
         return file_path.string();
     } else if (uri.find("package://") == 0) {
         return _ament_finder.find(uri);
