@@ -60,7 +60,6 @@ void GetURDFRootLinks(
         std::vector<std::shared_ptr<urdf::Link const> >       *roots)
 {
     typedef std::shared_ptr<urdf::Link const> LinkConstPtr;
-    // std::cout << "THERE 1" << std::endl;
     BOOST_ASSERT(roots);
     std::set<LinkConstPtr> const links_set(links.begin(), links.end());
 
@@ -72,7 +71,6 @@ void GetURDFRootLinks(
             roots->push_back(link);
         }
     }
-    // std::cout << "THERE 2" << std::endl;
 }
 
 srdf::Model::Group const &GetSRDFGroup(
@@ -246,13 +244,11 @@ void URDFLoader::ParseURDF(
                      std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
                      std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos)
 {
-    // std::cout << "Parse URDF " << std::endl;
     // Populate list of links from URDF model. We'll force the root link to be
     // first.
     // std::vector<boost::shared_ptr<urdf::Link> > link_vector;
     std::vector<std::shared_ptr<urdf::Link> > link_vector;
     model.getLinks(link_vector);
-    // std::cout << "ParseURDF::link_vector: " << link_vector.size() << std::endl;
 
     std::list<std::shared_ptr<urdf::Link const> > link_list;
     std::set<std::string> finished_links;
@@ -270,14 +266,11 @@ void URDFLoader::ParseURDF(
     std::shared_ptr<urdf::Link const> link_ptr;
 
     while (!link_list.empty()) {
-        // std::cout << "ll size: " << link_list.size() << std::endl;
         // Get next element in list
         // auto ll_front = link_list.front();
         // link_ptr = ConvertCSPToBoost<urdf::Link>(link_list.front());
         link_ptr = link_list.front();
         link_list.pop_front();
-
-        // std::cout << "ll size: " << link_list.size() << std::endl;
 
         OpenRAVE::KinBody::LinkInfoPtr link_info
                 = boost::make_shared<OpenRAVE::KinBody::LinkInfo>();
@@ -285,23 +278,16 @@ void URDFLoader::ParseURDF(
         // TODO: Set "type" to "dynamic".
         link_info->_name = link_ptr->name;
         link_info->SetTransform(OpenRAVE::Transform(OpenRAVE::Vector(1, 0, 0, 0), OpenRAVE::Vector(0, 0, 0)));
-        std::cout << "+==============================" << std::endl;
-        std::cout << "ParseURDF::link_info->_name: " << link_info->_name << std::endl;
-        std::cout << "link_info transform: " << link_info->GetTransform().rot.w << " " << link_info->GetTransform().rot.x << " " << link_info->GetTransform().rot.y << " " << link_info->GetTransform().rot.z << std::endl;
-        std::cout << "link_info translation: " << link_info->GetTransform().trans.x << " " << link_info->GetTransform().trans.y << " " << link_info->GetTransform().trans.z << std::endl;
 
         // Set inertial parameters
         // std::shared_ptr<urdf::Inertial> inertial = ConvertCPToBoostNC<urdf::Inertial>(link_ptr->inertial);
         std::shared_ptr<urdf::Inertial> inertial = link_ptr->inertial;
-        // std::cout << "inertial: " << inertial << std::endl;Rotation(1, 0, 0, 0)
         if (inertial) {
             // XXX: We should also specify the off-diagonal terms (ixy, iyz, ixz)
             // of the inertia tensor. We can do this in KinBody XML files, but I
             // cannot figure out how to do so through this API.
             link_info->_mass = inertial->mass;
             link_info->_tMassFrame = URDFPoseToRaveTransform(inertial->origin);
-            // std::cout << "Mass Frame: " << link_info->_tMassFrame.rot.w << " " << link_info->_tMassFrame.rot.x << " " << link_info->_tMassFrame.rot.y << " " << link_info->_tMassFrame.rot.z << std::endl;
-            // std::cout << "Mass Frame translation: " << link_info->_tMassFrame.trans.x << " " << link_info->_tMassFrame.trans.y << " " << link_info->_tMassFrame.trans.z << std::endl;
 
             link_info->_vinertiamoments = OpenRAVE::Vector(
                     inertial->ixx, inertial->iyy, inertial->izz);
@@ -311,29 +297,15 @@ void URDFLoader::ParseURDF(
         // boost::shared_ptr<urdf::Joint> parent_joint = ConvertCPToBoostNC<urdf::Joint>(link_ptr->parent_joint);
         std::shared_ptr<urdf::Joint> parent_joint = link_ptr->parent_joint;
         while (true) {
-            // std::cout << "pj1: " << parent_joint << std::endl;
             if (!parent_joint) {
-                // std::cout << "Error: parent_joint became null unexpectedly." << std::endl;
                 break;
             }
-            std::cout << "parent_joint->_name: " << parent_joint->name << std::endl;
-            std::cout << "parent_joint->parent_to_joint_origin_transform: " << parent_joint->parent_to_joint_origin_transform.rotation.w << " " << parent_joint->parent_to_joint_origin_transform.rotation.x << " " << parent_joint->parent_to_joint_origin_transform.rotation.y << " " << parent_joint->parent_to_joint_origin_transform.rotation.z << std::endl;
-            
-            // Also print the roll, pitch, and yaw
-            double roll, pitch, yaw;
-            parent_joint->parent_to_joint_origin_transform.rotation.getRPY(roll, pitch, yaw);
-            std::cout << "roll: " << roll << " pitch: " << pitch << " yaw: " << yaw << std::endl;
-
-
-            std::cout << "translation: " << parent_joint->parent_to_joint_origin_transform.position.x << " " << parent_joint->parent_to_joint_origin_transform.position.y << " " << parent_joint->parent_to_joint_origin_transform.position.z << std::endl;
             
             // link_info->GetTransform() = URDFPoseToRaveTransform(
             //         parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform();
             link_info->SetTransform(URDFPoseToRaveTransform(
                     parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform());
 
-            std::cout << "link_info transform: " << link_info->GetTransform().rot.w << " " << link_info->GetTransform().rot.x << " " << link_info->GetTransform().rot.y << " " << link_info->GetTransform().rot.z << std::endl;
-            std::cout << "link_info translation: " << link_info->GetTransform().trans.x << " " << link_info->GetTransform().trans.y << " " << link_info->GetTransform().trans.z << std::endl;
             // boost::shared_ptr<urdf::Link const> parent_link
             //         =  ConvertCSPToBoost<urdf::Link>(model.getLink(parent_joint->parent_link_name));
             std::shared_ptr<urdf::Link const> parent_link
@@ -341,10 +313,7 @@ void URDFLoader::ParseURDF(
 
             // parent_joint = ConvertCSPToBoostNC<urdf::Joint>(parent_link->parent_joint);
             parent_joint = parent_link->parent_joint;
-            // std::cout << "HELP2" << std::endl;
-            // std::cout << "pj2: " << parent_joint << std::endl;
             if(!parent_joint) {
-                // std::cout << "last parent" << std::endl;
                 break;
             }
         }
@@ -363,7 +332,6 @@ void URDFLoader::ParseURDF(
                 case urdf::Geometry::MESH: {
                     urdf::Mesh const &mesh
                             = dynamic_cast<const urdf::Mesh &>(*collision->geometry);
-                    // std::cout << "mesh.filename: " << mesh.filename << std::endl;
                     geom_info->_filenamecollision = resolveURI(mesh.filename);
                     geom_info->_type = OpenRAVE::GT_TriMesh;
 
@@ -375,7 +343,6 @@ void URDFLoader::ParseURDF(
                     trimesh = GetEnv()->ReadTrimeshURI(trimesh,
                                                        geom_info->_filenamecollision);
                     if (trimesh) {
-                        // std::cout << "Trimesh size: " << trimesh->vertices.size() << std::endl;
                         // The _vCollisionScale property does nothing, so we have to
                         // manually scale the mesh.
                         BOOST_FOREACH(OpenRAVE::Vector &vertex, trimesh->vertices) {
@@ -429,10 +396,7 @@ void URDFLoader::ParseURDF(
         if (visual) {
             OpenRAVE::KinBody::GeometryInfoPtr geom_info
                 = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>();
-            std::cout << "visual->origin: " << visual->origin.rotation.w << " " << visual->origin.rotation.x << " " << visual->origin.rotation.y << " " << visual->origin.rotation.z << std::endl;
-            std::cout << "visual->origin translation: " << visual->origin.position.x << " " << visual->origin.position.y << " " << visual->origin.position.z << std::endl;
             geom_info->SetTransform(URDFPoseToRaveTransform(visual->origin));
-            // std::cout << "Transform: " << URDFPoseToRaveTransform(visual->origin) << std::endl;
             geom_info->_type = OpenRAVE::GT_Sphere;
             geom_info->_vGeomData = OpenRAVE::Vector(0.0, 0.0, 0.0);
             geom_info->_bModifiable = false;
@@ -475,7 +439,6 @@ void URDFLoader::ParseURDF(
         link_info->_mapExtraGeometries["spheres"];
 
         link_infos.push_back(link_info);
-        // std::cout << "HERE6" << std::endl;
     }
 
     // Populate vector of joints
@@ -573,13 +536,10 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                            std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos,
                            std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> &manip_infos)
 {
-    std::cout << "\nPARSE SRDF" << std::endl;
-    // std::cout << "HERE1" << std::endl;
     std::map<std::string, OpenRAVE::KinBody::LinkInfoPtr> link_map;
     BOOST_FOREACH (OpenRAVE::KinBody::LinkInfoPtr link_info, link_infos) {
         link_map[link_info->_name] = link_info;
     }
-    // std::cout << "HERE2" << std::endl;
     // Link adjacencies.
     size_t num_adjacent = 0;
     BOOST_FOREACH (srdf::Model::CollisionPair const &link_pair,
@@ -606,7 +566,6 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                    num_adjacent);
 
     // TODO: Passive joints.
-    // std::cout << "HERE3" << std::endl;
     // Build an index of the SRDF groups. This is necessary because the srdf
     // package provides very low-level access to the file's contents.
     std::vector<srdf::Model::Group> const &raw_groups = srdf.getGroups();
@@ -619,13 +578,11 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                 boost::format("Duplicate SRDF group '%s'.") % group.name_));
         }
     }
-    // std::cout << "HERE4" << std::endl;
 
     // Create manipulators.
     BOOST_FOREACH (srdf::Model::EndEffector const &end_effector, srdf.getEndEffectors()) {
         typedef std::shared_ptr<urdf::Link const> LinkConstPtr;
         typedef std::shared_ptr<urdf::Joint const> JointConstPtr;
-        // std::cout << "HERE1" << std::endl;
 
         // Get the end-effector group its associated mainpulator. We assume
         // that the parent group of an end-effector is a manipulator.
@@ -633,26 +590,21 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                      end_effector.name_.c_str(),
                      end_effector.component_group_.c_str());
         srdf::Model::Group const &ee_group = GetSRDFGroup(groups, end_effector.component_group_);
-        // std::cout << "HERE2" << std::endl;
 
         if (end_effector.parent_group_.empty()) {
             throw std::runtime_error(boost::str(
                 boost::format("End-effector '%s' has no parent group.\n")
                     % end_effector.name_));
         }
-        // std::cout << "HERE3" << std::endl;
         RAVELOG_DEBUG("Loading '%s' manipulator group '%s'.\n",
                      end_effector.name_.c_str(),
                      end_effector.parent_group_.c_str());
         srdf::Model::Group const &manip_group = GetSRDFGroup(groups, end_effector.parent_group_);
-        // std::cout << "HERE4" << std::endl;
         // Compute the root link of the manipulator.
         std::vector<LinkConstPtr> manip_links, manip_root_links;
         std::vector<JointConstPtr> manip_joints;
         ExtractSRDFGroup(urdf, manip_group, &manip_links, &manip_joints);
-        // std::cout << "HERE5" << std::endl;
         GetURDFRootLinks(manip_links, &manip_root_links);
-        // std::cout << "HERE6" << std::endl;
         RAVELOG_DEBUG("Manipulator group '%s' contains %d links and %d joints.\n",
                      manip_group.name_.c_str(), manip_links.size(), manip_joints.size());
 
@@ -661,12 +613,10 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                 boost::format("Manipulator '%s' has %d root links; must have exactly one.")
                     % manip_group.name_.c_str() % manip_root_links.size()));
         }
-        // std::cout << "HERE7" << std::endl;
         LinkConstPtr manip_root_link = manip_root_links.front();
         BOOST_ASSERT(manip_root_link);
         RAVELOG_DEBUG("Detected '%s' as root link of manipulator group '%s'.\n",
                      manip_root_link->name.c_str(), manip_group.name_.c_str());
-        // std::cout << "HERE8" << std::endl;
 
         // Find the parent link of the end-effector. This serves as the tip
         // link of the manipulator.
@@ -682,13 +632,11 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
         }
         RAVELOG_DEBUG("Found manipulator tip link '%s'.\n",
                      ee_root_link->_name.c_str());
-        // std::cout << "HERE9" << std::endl;
         // Find active joints in the end-effector group. We will treat these as
         // gripper joints.
         std::vector<LinkConstPtr> ee_links, ee_root_links;
         std::vector<JointConstPtr> ee_joints;
         ExtractSRDFGroup(urdf, ee_group, &ee_links, &ee_joints);
-        // std::cout << "HERE10" << std::endl;
         std::set<JointConstPtr> gripper_joints;
         size_t num_rejected_gripper_joints = 0;
 
@@ -702,7 +650,6 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
                 num_rejected_gripper_joints++;
             }
         }
-        // std::cout << "HERE11" << std::endl;
         RAVELOG_DEBUG("Found %d gripper joints for manipulator '%s';"
                      " ignored %d passive/mimic joints.\n",
                      gripper_joints.size(), manip_group.name_.c_str(),
@@ -718,15 +665,11 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
         manip_info->_vdirection = OpenRAVE::Vector(0, 0, 1);
         manip_info->_vChuckingDirection.resize(gripper_joints.size(), 0.0);
         manip_info->_sEffectorLinkName = ee_root_link->_name;
-        // std::cout << "HERE12" << std::endl;
         BOOST_FOREACH (JointConstPtr joint, gripper_joints) {
             manip_info->_vGripperJointNames.push_back(joint->name);
         }
         manip_infos.push_back(manip_info);
-        // std::cout << "HERE13" << std::endl;
     }
-
-    // std::cout << "HERE5" << std::endl;
 
     // Add the sphere approximation to a geometry group.
     BOOST_FOREACH (srdf::Model::LinkSpheres const &spheres,
@@ -777,7 +720,6 @@ void URDFLoader::ParseSRDF(urdf::Model const &urdf, srdf::Model const &srdf,
             sphere_infos.push_back(sphere_info);
         }
     }
-    // std::cout << "HERE6" << std::endl;
 }
 
 void URDFLoader::ProcessGeometryGroupTagsFromURDF(
@@ -1087,8 +1029,6 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
   std::vector<OpenRAVE::KinBody::LinkInfoPtr> link_infos;
   std::vector<OpenRAVE::KinBody::JointInfoPtr> joint_infos;
   ParseURDF(urdf_model, link_infos, joint_infos);
-//   std::cout << "link_infos: " << link_infos.size() << std::endl;
-//   std::cout << "joint_infos: " << joint_infos.size() << std::endl;
 
   std::vector<OpenRAVE::RobotBase::ManipulatorInfoPtr> manip_infos;
   std::vector<OpenRAVE::RobotBase::AttachedSensorInfoPtr> sensor_infos;
@@ -1108,7 +1048,6 @@ std::string URDFLoader::loadModel(urdf::Model &urdf_model,
         manip_infos_const = MakeConst(manip_infos);
     std::vector<OpenRAVE::RobotBase::AttachedSensorInfoConstPtr>
         sensor_infos_const = MakeConst(sensor_infos);
-    // std::cout << "const_link_infos: " << link_infos_const.size() << std::endl;
 
     // TODO: Sort the joints to guarantee contiguous manipulators.
 
@@ -1144,7 +1083,6 @@ std::string URDFLoader::resolveURI(const std::string &path) const
 
         // Resolve the mesh path as a file URI
         boost::filesystem::path file_path(uri);
-        // std::cout << "file path: " << file_path.string() << std::endl;
         return file_path.string();
     } else if (uri.find("package://") == 0) {
         return _ament_finder.find(uri);
