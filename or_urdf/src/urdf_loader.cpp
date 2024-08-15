@@ -194,7 +194,7 @@ OpenRAVE::Vector URDFVectorToRaveVector(const urdf::Vector3 &vector)
 /** Converts from URDF 3D rotation to OpenRAVE 3D vector. */
 OpenRAVE::Vector URDFRotationToRaveVector(const urdf::Rotation &rotation)
 {
-    return OpenRAVE::Vector(rotation.x, rotation.y, rotation.z, rotation.w);
+    return OpenRAVE::Vector(rotation.w, rotation.x, rotation.y, rotation.z);
 }
 
 OpenRAVE::Vector URDFColorToRaveVector(const urdf::Color &color)
@@ -284,18 +284,25 @@ void URDFLoader::ParseURDF(
 
         // TODO: Set "type" to "dynamic".
         link_info->_name = link_ptr->name;
-        // std::cout << "ParseURDF::link_info->_name: " << link_info->_name << std::endl;
+        link_info->SetTransform(OpenRAVE::Transform(OpenRAVE::Vector(1, 0, 0, 0), OpenRAVE::Vector(0, 0, 0)));
+        std::cout << "+==============================" << std::endl;
+        std::cout << "ParseURDF::link_info->_name: " << link_info->_name << std::endl;
+        std::cout << "link_info transform: " << link_info->GetTransform().rot.w << " " << link_info->GetTransform().rot.x << " " << link_info->GetTransform().rot.y << " " << link_info->GetTransform().rot.z << std::endl;
+        std::cout << "link_info translation: " << link_info->GetTransform().trans.x << " " << link_info->GetTransform().trans.y << " " << link_info->GetTransform().trans.z << std::endl;
 
         // Set inertial parameters
         // std::shared_ptr<urdf::Inertial> inertial = ConvertCPToBoostNC<urdf::Inertial>(link_ptr->inertial);
         std::shared_ptr<urdf::Inertial> inertial = link_ptr->inertial;
-        // std::cout << "inertial: " << inertial << std::endl;
+        // std::cout << "inertial: " << inertial << std::endl;Rotation(1, 0, 0, 0)
         if (inertial) {
             // XXX: We should also specify the off-diagonal terms (ixy, iyz, ixz)
             // of the inertia tensor. We can do this in KinBody XML files, but I
             // cannot figure out how to do so through this API.
             link_info->_mass = inertial->mass;
             link_info->_tMassFrame = URDFPoseToRaveTransform(inertial->origin);
+            // std::cout << "Mass Frame: " << link_info->_tMassFrame.rot.w << " " << link_info->_tMassFrame.rot.x << " " << link_info->_tMassFrame.rot.y << " " << link_info->_tMassFrame.rot.z << std::endl;
+            // std::cout << "Mass Frame translation: " << link_info->_tMassFrame.trans.x << " " << link_info->_tMassFrame.trans.y << " " << link_info->_tMassFrame.trans.z << std::endl;
+
             link_info->_vinertiamoments = OpenRAVE::Vector(
                     inertial->ixx, inertial->iyy, inertial->izz);
         }
@@ -309,13 +316,24 @@ void URDFLoader::ParseURDF(
                 // std::cout << "Error: parent_joint became null unexpectedly." << std::endl;
                 break;
             }
-            // std::cout << "parent_joint->_name: " << parent_joint->name << std::endl;
-            // std::cout << "parent_joint transform: " << parent_joint->parent_to_joint_origin_transform << std::endl;
-            // std::cout << "link_info transform: " << link_info->GetTransform() << std::endl;
+            std::cout << "parent_joint->_name: " << parent_joint->name << std::endl;
+            std::cout << "parent_joint->parent_to_joint_origin_transform: " << parent_joint->parent_to_joint_origin_transform.rotation.w << " " << parent_joint->parent_to_joint_origin_transform.rotation.x << " " << parent_joint->parent_to_joint_origin_transform.rotation.y << " " << parent_joint->parent_to_joint_origin_transform.rotation.z << std::endl;
+            
+            // Also print the roll, pitch, and yaw
+            double roll, pitch, yaw;
+            parent_joint->parent_to_joint_origin_transform.rotation.getRPY(roll, pitch, yaw);
+            std::cout << "roll: " << roll << " pitch: " << pitch << " yaw: " << yaw << std::endl;
+
+
+            std::cout << "translation: " << parent_joint->parent_to_joint_origin_transform.position.x << " " << parent_joint->parent_to_joint_origin_transform.position.y << " " << parent_joint->parent_to_joint_origin_transform.position.z << std::endl;
+            
             // link_info->GetTransform() = URDFPoseToRaveTransform(
             //         parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform();
             link_info->SetTransform(URDFPoseToRaveTransform(
                     parent_joint->parent_to_joint_origin_transform) * link_info->GetTransform());
+
+            std::cout << "link_info transform: " << link_info->GetTransform().rot.w << " " << link_info->GetTransform().rot.x << " " << link_info->GetTransform().rot.y << " " << link_info->GetTransform().rot.z << std::endl;
+            std::cout << "link_info translation: " << link_info->GetTransform().trans.x << " " << link_info->GetTransform().trans.y << " " << link_info->GetTransform().trans.z << std::endl;
             // boost::shared_ptr<urdf::Link const> parent_link
             //         =  ConvertCSPToBoost<urdf::Link>(model.getLink(parent_joint->parent_link_name));
             std::shared_ptr<urdf::Link const> parent_link
@@ -411,7 +429,8 @@ void URDFLoader::ParseURDF(
         if (visual) {
             OpenRAVE::KinBody::GeometryInfoPtr geom_info
                 = boost::make_shared<OpenRAVE::KinBody::GeometryInfo>();
-            // std::cout << "visual->origin: " << visual->origin.rotation.w << " " << visual->origin.rotation.x << " " << visual->origin.rotation.y << " " << visual->origin.rotation.z << std::endl;
+            std::cout << "visual->origin: " << visual->origin.rotation.w << " " << visual->origin.rotation.x << " " << visual->origin.rotation.y << " " << visual->origin.rotation.z << std::endl;
+            std::cout << "visual->origin translation: " << visual->origin.position.x << " " << visual->origin.position.y << " " << visual->origin.position.z << std::endl;
             geom_info->SetTransform(URDFPoseToRaveTransform(visual->origin));
             // std::cout << "Transform: " << URDFPoseToRaveTransform(visual->origin) << std::endl;
             geom_info->_type = OpenRAVE::GT_Sphere;
